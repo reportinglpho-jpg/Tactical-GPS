@@ -151,11 +151,12 @@
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get('room') || 'rescue-team-default';
         
-        let userId = localStorage.getItem('rescue_user_id');
-        if (!userId) {
-            userId = 'unit-' + Math.random().toString(36).substr(2, 6);
-            localStorage.setItem('rescue_user_id', userId);
-        }
+        // เปลี่ยนจากเดิมที่เป็น localStorage
+let userId = sessionStorage.getItem('rescue_user_id');
+if (!userId) {
+    userId = 'unit-' + Math.random().toString(36).substr(2, 6);
+    sessionStorage.setItem('rescue_user_id', userId);
+}
 
         // =============================================================
         // ระบบแผนที่และการจัดการ GPS

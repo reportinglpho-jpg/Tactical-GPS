@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TACTICAL HUD - ADVANCED GPS SYSTEM</title>
+    <title>TACTICAL HUD - OFFLINE GPS SYSTEM</title>
     <!-- Favicon ไอคอนเว็บ -->
     <link rel="icon" type="image/png" href="gps.png">
     <!-- โหลด Leaflet CSS -->
@@ -11,114 +11,42 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Courier New', Courier, monospace; background: #020610; color: #00f0ff; overflow: hidden; }
         
-        /* แผงค้นหาด้านบนสุด */
         #search-container {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 500px;
-            z-index: 1000;
-            display: flex;
-            gap: 8px;
-            background: rgba(2, 6, 16, 0.85);
-            padding: 8px;
-            border: 1px solid #00f0ff;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-            border-radius: 4px;
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 500px; z-index: 1000; display: flex; gap: 8px;
+            background: rgba(2, 6, 16, 0.85); padding: 8px; border: 1px solid #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); border-radius: 4px;
         }
-
         #search-input {
-            flex: 1;
-            background: #000;
-            border: 1px solid #00f0ff;
-            color: #00f0ff;
-            padding: 8px 12px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 13px;
-            outline: none;
+            flex: 1; background: #000; border: 1px solid #00f0ff; color: #00f0ff;
+            padding: 8px 12px; font-family: 'Courier New', Courier, monospace; font-size: 13px; outline: none;
         }
-
         #search-input::placeholder { color: rgba(0, 240, 255, 0.4); }
-
         .tactical-btn {
-            background: rgba(0, 240, 255, 0.2);
-            border: 1px solid #00f0ff;
-            color: #00f0ff;
-            padding: 8px 14px;
-            cursor: pointer;
-            font-weight: bold;
-            font-family: 'Courier New', Courier, monospace;
-            transition: 0.2s;
+            background: rgba(0, 240, 255, 0.2); border: 1px solid #00f0ff; color: #00f0ff;
+            padding: 8px 14px; cursor: pointer; font-weight: bold; font-family: 'Courier New', Courier, monospace; transition: 0.2s;
         }
+        .tactical-btn:hover { background: #00f0ff; color: #020610; box-shadow: 0 0 10px #00f0ff; }
 
-        .tactical-btn:hover {
-            background: #00f0ff;
-            color: #020610;
-            box-shadow: 0 0 10px #00f0ff;
-        }
-
-        /* ผลลัพธ์การค้นหา */
         #search-results {
-            position: absolute;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 500px;
-            background: rgba(2, 6, 16, 0.95);
-            border: 1px solid #00f0ff;
-            z-index: 1000;
-            max-height: 150px;
-            overflow-y: auto;
-            display: none;
+            position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 500px; background: rgba(2, 6, 16, 0.95); border: 1px solid #00f0ff;
+            z-index: 1000; max-height: 150px; overflow-y: auto; display: none;
         }
+        .search-item { padding: 8px 12px; font-size: 12px; border-bottom: 1px solid rgba(0, 240, 255, 0.2); cursor: pointer; }
+        .search-item:hover { background: rgba(0, 240, 255, 0.2); color: #fff; }
 
-        .search-item {
-            padding: 8px 12px;
-            font-size: 12px;
-            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
-            cursor: pointer;
-        }
+        #map { width: 100%; height: 70vh; filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.4); }
 
-        .search-item:hover {
-            background: rgba(0, 240, 255, 0.2);
-            color: #fff;
-        }
-
-        /* แผนที่หลัก */
-        #map { 
-            width: 100%; 
-            height: 70vh; 
-            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.4);
-        }
-
-        /* แผงควบคุมสไตล์ Sci-Fi HUD */
         #hud-panel { 
-            height: 30vh; 
-            background: rgba(2, 6, 16, 0.95); 
-            border-top: 2px solid #00f0ff; 
-            box-shadow: 0 -5px 25px rgba(0, 240, 255, 0.4); 
-            padding: 10px 20px; 
-            box-sizing: border-box; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-around; 
-            position: relative;
+            height: 30vh; background: rgba(2, 6, 16, 0.95); border-top: 2px solid #00f0ff; 
+            box-shadow: 0 -5px 25px rgba(0, 240, 255, 0.4); padding: 10px 20px; box-sizing: border-box; 
+            display: flex; flex-direction: column; justify-content: space-around; position: relative;
         }
-
         #hud-panel::before {
-            content: "TACTICAL_NAV // SECURE_LINK";
-            position: absolute;
-            top: -10px;
-            left: 20px;
-            background: #020610;
-            color: #00f0ff;
-            font-size: 10px;
-            padding: 0 8px;
-            letter-spacing: 2px;
-            border: 1px solid #00f0ff;
+            content: "TACTICAL_NAV // OFFLINE_CACHE_READY";
+            position: absolute; top: -10px; left: 20px; background: #020610; color: #00f0ff;
+            font-size: 10px; padding: 0 8px; letter-spacing: 2px; border: 1px solid #00f0ff;
         }
 
         .hud-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; letter-spacing: 1px; }
@@ -127,17 +55,8 @@
         .highlight { color: #ffff00; text-shadow: 0 0 8px #ffff00; font-weight: bold; }
         .nav-info { color: #ff00ff; text-shadow: 0 0 8px #ff00ff; font-weight: bold; }
 
-        /* ตัวเลือกไอคอน GPS */
-        .icon-selector {
-            background: #000;
-            border: 1px solid #00f0ff;
-            color: #00f0ff;
-            padding: 2px 6px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-        }
+        .icon-selector { background: #000; border: 1px solid #00f0ff; color: #00f0ff; padding: 2px 6px; font-family: 'Courier New', Courier, monospace; font-size: 11px; }
 
-        /* รูปแบบไอคอน GPS แบบต่างๆ */
         .sci-fi-marker {
             width: 24px; height: 24px; border: 2px solid #00f0ff; border-radius: 50%;
             box-shadow: 0 0 10px #00f0ff; display: flex; align-items: center; justify-content: center;
@@ -152,26 +71,18 @@
         }
         .drone-marker::after { content: '✚'; color: #00ffcc; font-size: 12px; font-weight: bold; }
 
-        .vehicle-marker {
-            width: 22px; height: 22px; background: #ffff00; border: 2px solid #ff0055;
-            box-shadow: 0 0 10px #ffff00; transform: rotate(45deg);
-        }
+        .vehicle-marker { width: 22px; height: 22px; background: #ffff00; border: 2px solid #ff0055; box-shadow: 0 0 10px #ffff00; transform: rotate(45deg); }
 
-        @keyframes pulse-ring {
-            0% { transform: scale(0.9); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 20px #00f0ff; }
-            100% { transform: scale(0.9); opacity: 0.8; }
-        }
+        @keyframes pulse-ring { 0% { transform: scale(0.9); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 20px #00f0ff; } 100% { transform: scale(0.9); opacity: 0.8; } }
         @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <!-- ช่องค้นหาสถานที่ -->
     <div id="search-container">
         <input type="text" id="search-input" placeholder="ค้นหาสถานที่ปลายทาง...">
         <button class="tactical-btn" onclick="searchLocation()">ค้นหา</button>
-        <button class="tactical-btn" onclick="clearRoute()" style="border-color:#ff3366; color:#ff3366;">ล้างเส้นทาง</button>
+        <button class="tactical-btn" onclick="clearRoute()" style="border-color:#ff3366; color:#ff3366;">ล้าง</button>
     </div>
     <div id="search-results"></div>
 
@@ -179,12 +90,12 @@
     
     <div id="hud-panel">
         <div class="hud-row">
-            <div>NETWORK: <span id="network-status" class="status-online">CONNECTING...</span></div>
-            <div>ICON STYLE: 
+            <div>NET: <span id="network-status" class="status-online">CONNECTING...</span></div>
+            <div>ICON: 
                 <select id="iconSelector" class="icon-selector" onchange="changeMarkerIcon(this.value)">
-                    <option value="sci-fi">TACTICAL TARGET</option>
-                    <option value="drone">CYBER DRONE</option>
-                    <option value="vehicle">COMBAT UNIT</option>
+                    <option value="sci-fi">TARGET</option>
+                    <option value="drone">DRONE</option>
+                    <option value="vehicle">UNIT</option>
                 </select>
             </div>
         </div>
@@ -204,6 +115,15 @@
     <!-- โหลด Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // ลงทะเบียน Service Worker เพื่อรองรับการทำงานแบบ Offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registered!', reg))
+                    .catch(err => console.log('Service Worker Failed', err));
+            });
+        }
+
         var map = L.map('map', { zoomControl: false }).setView([13.7563, 100.5018], 18);
 
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
@@ -240,7 +160,7 @@
         function updateNetworkStatus() {
             const statusEl = document.getElementById('network-status');
             if (navigator.onLine) {
-                statusEl.textContent = "ONLINE [CELL/WIFI]";
+                statusEl.textContent = "ONLINE [CACHING ACTIVE]";
                 statusEl.className = "status-online";
             } else {
                 statusEl.textContent = "OFFLINE [CACHE MODE]";
@@ -313,7 +233,7 @@
                     const resultsContainer = document.getElementById('search-results');
                     resultsContainer.innerHTML = '';
                     if (data.length === 0) {
-                        resultsContainer.innerHTML = '<div class="search-item">ไม่พบสถานที่ที่ค้นหา</div>';
+                        resultsContainer.innerHTML = '<div class="search-item">ไม่พบสถานที่</div>';
                         resultsContainer.style.display = 'block';
                         return;
                     }
@@ -364,11 +284,7 @@
                             routeLine.setLatLngs(coords);
                         } else {
                             routeLine = L.polyline(coords, {
-                                color: '#00f0ff',
-                                weight: 4,
-                                opacity: 0.8,
-                                shadowColor: '#00f0ff',
-                                shadowBlur: 10
+                                color: '#00f0ff', weight: 4, opacity: 0.8, shadowColor: '#00f0ff', shadowBlur: 10
                             }).addTo(map);
                         }
 
@@ -382,14 +298,8 @@
         }
 
         function clearRoute() {
-            if (destinationMarker) {
-                map.removeLayer(destinationMarker);
-                destinationMarker = null;
-            }
-            if (routeLine) {
-                map.removeLayer(routeLine);
-                routeLine = null;
-            }
+            if (destinationMarker) { map.removeLayer(destinationMarker); destinationMarker = null; }
+            if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
             document.getElementById('route-dist').textContent = "0 M";
             document.getElementById('route-time').textContent = "0 MIN";
             document.getElementById('search-input').value = "";

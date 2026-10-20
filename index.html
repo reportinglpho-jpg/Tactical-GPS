@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TACTICAL HUD - ADVANCED GPS SYSTEM</title>
+    <!-- โหลด Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Courier New', Courier, monospace; background: #020610; color: #00f0ff; overflow: hidden; }
+        
+        /* แผงค้นหาด้านบนสุด */
+        #search-container {
+            position: absolute;<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TACTICAL HUD - ADVANCED GPS SYSTEM</title>
+    <!-- Favicon ไอคอนเว็บ -->
+    <link rel="icon" type="image/png" href="gps.png">
+    <!-- โหลด Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Courier New', Courier, monospace; background: #020610; color: #00f0ff; overflow: hidden; }
+        
+        /* แผงค้นหาด้านบนสุด */
+        #search-container {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            background: rgba(2, 6, 16, 0.85);
+            padding: 8px;
+            border: 1px solid #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        #search-input {
+            flex: 1;
+            background: #000;
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 8px 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            outline: none;
+        }
+
+        #search-input::placeholder { color: rgba(0, 240, 255, 0.4); }
+
+        .tactical-btn {
+            background: rgba(0, 240, 255, 0.2);
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            transition: 0.2s;
+        }
+
+        .tactical-btn:hover {
+            background: #00f0ff;
+            color: #020610;
+            box-shadow: 0 0 10px #00f0ff;
+        }
+
+        /* ผลลัพธ์การค้นหา */
+        #search-results {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            background: rgba(2, 6, 16, 0.95);
+            border: 1px solid #00f0ff;
+            z-index: 1000;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .search-item {
+            padding: 8px 12px;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+            cursor: pointer;
+        }
+
+        .search-item:hover {
+            background: rgba(0, 240, 255, 0.2);
+            color: #fff;
+        }
+
+        /* แผนที่หลัก */
+        #map { 
+            width: 100%; 
+            height: 70vh; 
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.4);
+        }
+
+        /* แผงควบคุมสไตล์ Sci-Fi HUD */
+        #hud-panel { 
+            height: 30vh; 
+            background: rgba(2, 6, 16, 0.95); 
+            border-top: 2px solid #00f0ff; 
+            box-shadow: 0 -5px 25px rgba(0, 240, 255, 0.4); 
+            padding: 10px 20px; 
+            box-sizing: border-box; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-around; 
+            position: relative;
+        }
+
+        #hud-panel::before {
+            content: "TACTICAL_NAV // SECURE_LINK";
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #020610;
+            color: #00f0ff;
+            font-size: 10px;
+            padding: 0 8px;
+            letter-spacing: 2px;
+            border: 1px solid #00f0ff;
+        }
+
+        .hud-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; letter-spacing: 1px; }
+        .status-online { color: #00ffcc; text-shadow: 0 0 8px #00ffcc; font-weight: bold; }
+        .status-offline { color: #ff3366; text-shadow: 0 0 8px #ff3366; font-weight: bold; }
+        .highlight { color: #ffff00; text-shadow: 0 0 8px #ffff00; font-weight: bold; }
+        .nav-info { color: #ff00ff; text-shadow: 0 0 8px #ff00ff; font-weight: bold; }
+
+        /* ตัวเลือกไอคอน GPS */
+        .icon-selector {
+            background: #000;
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 2px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+        }
+
+        /* รูปแบบไอคอน GPS แบบต่างๆ */
+        .sci-fi-marker {
+            width: 24px; height: 24px; border: 2px solid #00f0ff; border-radius: 50%;
+            box-shadow: 0 0 10px #00f0ff; display: flex; align-items: center; justify-content: center;
+            animation: pulse-ring 1.5s infinite;
+        }
+        .sci-fi-marker::after { content: ''; width: 6px; height: 6px; background: #00f0ff; border-radius: 50%; box-shadow: 0 0 6px #00f0ff; }
+
+        .drone-marker {
+            width: 26px; height: 26px; border: 2px dashed #00ffcc; border-radius: 4px;
+            box-shadow: 0 0 10px #00ffcc; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,255,204,0.2); animation: spin 4s linear infinite;
+        }
+        .drone-marker::after { content: '✚'; color: #00ffcc; font-size: 12px; font-weight: bold; }
+
+        .vehicle-marker {
+            width: 22px; height: 22px; background: #ffff00; border: 2px solid #ff0055;
+            box-shadow: 0 0 10px #ffff00; transform: rotate(45deg);
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 20px #00f0ff; }
+            100% { transform: scale(0.9); opacity: 0.8; }
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- ช่องค้นหาสถานที่ -->
+    <div id="search-container">
+        <input type="text" id="search-input" placeholder="ค้นหาสถานที่ปลายทาง...">
+        <button class="tactical-btn" onclick="searchLocation()">ค้นหา</button>
+        <button class="tactical-btn" onclick="clearRoute()" style="border-color:#ff3366; color:#ff3366;">ล้างเส้นทาง</button>
+    </div>
+    <div id="search-results"></div>
+
+    <div id="map"></div>
+    
+    <div id="hud-panel">
+        <div class="hud-row">
+            <div>NETWORK: <span id="network-status" class="status-online">CONNECTING...</span></div>
+            <div>ICON STYLE: 
+                <select id="iconSelector" class="icon-selector" onchange="changeMarkerIcon(this.value)">
+                    <option value="sci-fi">TACTICAL TARGET</option>
+                    <option value="drone">CYBER DRONE</option>
+                    <option value="vehicle">COMBAT UNIT</option>
+                </select>
+            </div>
+        </div>
+        <div class="hud-row">
+            <div>GPS COORDS: <span id="coords" class="highlight">ACQUIRING SIGNAL...</span></div>
+        </div>
+        <div class="hud-row">
+            <div>ACCURACY: <span id="accuracy">-</span></div>
+            <div>VELOCITY: <span id="speed" class="highlight">0.0 KM/H</span></div>
+        </div>
+        <div class="hud-row">
+            <div>DISTANCE: <span id="route-dist" class="nav-info">0 M</span></div>
+            <div>EST. TIME: <span id="route-time" class="nav-info">0 MIN</span></div>
+        </div>
+    </div>
+
+    <!-- โหลด Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. สร้างแผนที่ตั้งค่าเริ่มต้นที่กรุงเทพฯ[cite: 1]
+        var map = L.map('map', { zoomControl: false }).setView([13.7563, 100.5018], 18);
+
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'ESRI Tactical Grid'
+        }).addTo(map);
+
+        var marker = null;
+        var accuracyCircle = null;
+        var destinationMarker = null;
+        var routeLine = null;
+        var currentLat = null, currentLng = null;
+        var currentIconType = 'sci-fi';
+
+        function getIconHtml(type) {
+            if (type === 'drone') return '<div class="drone-marker"></div>';
+            if (type === 'vehicle') return '<div class="vehicle-marker"></div>';
+            return '<div class="sci-fi-marker"></div>';
+        }
+
+        function changeMarkerIcon(type) {
+            currentIconType = type;
+            if (marker && currentLat && currentLng) {
+                var newIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: getIconHtml(currentIconType),
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                marker.setIcon(newIcon);
+            }
+        }
+
+        function updateNetworkStatus() {
+            const statusEl = document.getElementById('network-status');
+            if (navigator.onLine) {
+                statusEl.textContent = "ONLINE [CELL/WIFI]";
+                statusEl.className = "status-online";
+            } else {
+                statusEl.textContent = "OFFLINE [CACHE MODE]";
+                statusEl.className = "status-offline";
+            }
+        }
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+        updateNetworkStatus();
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.watchPosition(function(position) {
+                currentLat = position.coords.latitude;
+                currentLng = position.coords.longitude;
+                var accuracy = position.coords.accuracy; 
+                var speed = position.coords.speed ? (position.coords.speed * 3.6).toFixed(1) : 0.0; 
+
+                document.getElementById('coords').textContent = `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
+                document.getElementById('accuracy').textContent = `± ${accuracy.toFixed(1)} M`;
+                document.getElementById('speed').textContent = `${speed} KM/H`;
+
+                var currentLatLng = new L.LatLng(currentLat, currentLng);
+                var customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: getIconHtml(currentIconType),
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                if (!marker) {
+                    marker = L.marker(currentLatLng, { icon: customIcon }).addTo(map);
+                    map.setView(currentLatLng, 18);
+                } else {
+                    marker.setLatLng(currentLatLng);
+                }
+
+                if (!accuracyCircle) {
+                    accuracyCircle = L.circle(currentLatLng, {
+                        radius: accuracy, color: '#00f0ff', weight: 1.5,
+                        dashArray: '4, 6', fillColor: '#00f0ff', fillOpacity: 0.05
+                    }).addTo(map);
+                } else {
+                    accuracyCircle.setLatLng(currentLatLng);
+                    accuracyCircle.setRadius(accuracy);
+                }
+
+                if (destinationMarker) {
+                    calculateRoute(currentLatLng, destinationMarker.getLatLng());
+                }
+
+            }, function(error) {
+                console.error("GPS Error: ", error.message);
+                document.getElementById('coords').textContent = "SIGNAL LOST (ENABLE LOCATION)";
+            }, {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000
+            });
+        } else {
+            alert("BROWSER NOT SUPPORTED");
+        }
+
+        function searchLocation() {
+            const query = document.getElementById('search-input').value;
+            if (!query) return;
+
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsContainer = document.getElementById('search-results');
+                    resultsContainer.innerHTML = '';
+                    if (data.length === 0) {
+                        resultsContainer.innerHTML = '<div class="search-item">ไม่พบสถานที่ที่ค้นหา</div>';
+                        resultsContainer.style.display = 'block';
+                        return;
+                    }
+
+                    resultsContainer.style.display = 'block';
+                    data.forEach(place => {
+                        const div = document.createElement('div');
+                        div.className = 'search-item';
+                        div.textContent = place.display_name;
+                        div.onclick = function() {
+                            selectDestination(parseFloat(place.lat), parseFloat(place.lon), place.display_name);
+                            resultsContainer.style.display = 'none';
+                        };
+                        resultsContainer.appendChild(div);
+                    });
+                })
+                .catch(err => console.error("Search error:", err));
+        }
+
+        function selectDestination(lat, lon, name) {
+            var destLatLng = new L.LatLng(lat, lon);
+
+            if (destinationMarker) {
+                destinationMarker.setLatLng(destLatLng);
+            } else {
+                destinationMarker = L.marker(destLatLng).addTo(map)
+                    .bindPopup(`<b>DESTINATION:</b> ${name}`).openPopup();
+            }
+
+            map.setView(destLatLng, 15);
+
+            if (currentLat && currentLng) {
+                calculateRoute(new L.LatLng(currentLat, currentLng), destLatLng);
+            }
+        }
+
+        function calculateRoute(start, end) {
+            const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+                        if (routeLine) {
+                            routeLine.setLatLngs(coords);
+                        } else {
+                            routeLine = L.polyline(coords, {
+                                color: '#00f0ff',
+                                weight: 4,
+                                opacity: 0.8,
+                                shadowColor: '#00f0ff',
+                                shadowBlur: 10
+                            }).addTo(map);
+                        }
+
+                        const distKm = (route.distance / 1000).toFixed(2);
+                        const durationMin = Math.round(route.duration / 60);
+                        document.getElementById('route-dist').textContent = `${distKm} KM`;
+                        document.getElementById('route-time').textContent = `${durationMin} MIN`;
+                    }
+                })
+                .catch(err => console.error("Routing error:", err));
+        }
+
+        function clearRoute() {
+            if (destinationMarker) {
+                map.removeLayer(destinationMarker);
+                destinationMarker = null;
+            }
+            if (routeLine) {
+                map.removeLayer(routeLine);
+                routeLine = null;
+            }
+            document.getElementById('route-dist').textContent = "0 M";
+            document.getElementById('route-time').textContent = "0 MIN";
+            document.getElementById('search-input').value = "";
+            document.getElementById('search-results').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+            background: rgba(2, 6, 16, 0.85);
+            padding: 8px;
+            border: 1px solid #00f0ff;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        #search-input {
+            flex: 1;
+            background: #000;
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 8px 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            outline: none;
+        }
+
+        #search-input::placeholder { color: rgba(0, 240, 255, 0.4); }
+
+        .tactical-btn {
+            background: rgba(0, 240, 255, 0.2);
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            transition: 0.2s;
+        }
+
+        .tactical-btn:hover {
+            background: #00f0ff;
+            color: #020610;
+            box-shadow: 0 0 10px #00f0ff;
+        }
+
+        /* ผลลัพธ์การค้นหา */
+        #search-results {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            background: rgba(2, 6, 16, 0.95);
+            border: 1px solid #00f0ff;
+            z-index: 1000;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .search-item {
+            padding: 8px 12px;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+            cursor: pointer;
+        }
+
+        .search-item:hover {
+            background: rgba(0, 240, 255, 0.2);
+            color: #fff;
+        }
+
+        /* แผนที่หลัก */
+        #map { 
+            width: 100%; 
+            height: 70vh; 
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.4);
+        }
+
+        /* แผงควบคุมสไตล์ Sci-Fi HUD */
+        #hud-panel { 
+            height: 30vh; 
+            background: rgba(2, 6, 16, 0.95); 
+            border-top: 2px solid #00f0ff; 
+            box-shadow: 0 -5px 25px rgba(0, 240, 255, 0.4); 
+            padding: 10px 20px; 
+            box-sizing: border-box; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-around; 
+            position: relative;
+        }
+
+        #hud-panel::before {
+            content: "TACTICAL_NAV // SECURE_LINK";
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #020610;
+            color: #00f0ff;
+            font-size: 10px;
+            padding: 0 8px;
+            letter-spacing: 2px;
+            border: 1px solid #00f0ff;
+        }
+
+        .hud-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; letter-spacing: 1px; }
+        .status-online { color: #00ffcc; text-shadow: 0 0 8px #00ffcc; font-weight: bold; }
+        .status-offline { color: #ff3366; text-shadow: 0 0 8px #ff3366; font-weight: bold; }
+        .highlight { color: #ffff00; text-shadow: 0 0 8px #ffff00; font-weight: bold; }
+        .nav-info { color: #ff00ff; text-shadow: 0 0 8px #ff00ff; font-weight: bold; }
+
+        /* ตัวเลือกไอคอน GPS */
+        .icon-selector {
+            background: #000;
+            border: 1px solid #00f0ff;
+            color: #00f0ff;
+            padding: 2px 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+        }
+
+        /* รูปแบบไอคอน GPS แบบต่างๆ */
+        .sci-fi-marker {
+            width: 24px; height: 24px; border: 2px solid #00f0ff; border-radius: 50%;
+            box-shadow: 0 0 10px #00f0ff; display: flex; align-items: center; justify-content: center;
+            animation: pulse-ring 1.5s infinite;
+        }
+        .sci-fi-marker::after { content: ''; width: 6px; height: 6px; background: #00f0ff; border-radius: 50%; box-shadow: 0 0 6px #00f0ff; }
+
+        .drone-marker {
+            width: 26px; height: 26px; border: 2px dashed #00ffcc; border-radius: 4px;
+            box-shadow: 0 0 10px #00ffcc; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,255,204,0.2); animation: spin 4s linear infinite;
+        }
+        .drone-marker::after { content: '✚'; color: #00ffcc; font-size: 12px; font-weight: bold; }
+
+        .vehicle-marker {
+            width: 22px; height: 22px; background: #ffff00; border: 2px solid #ff0055;
+            box-shadow: 0 0 10px #ffff00; transform: rotate(45deg);
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 20px #00f0ff; }
+            100% { transform: scale(0.9); opacity: 0.8; }
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- ช่องค้นหาสถานที่ -->
+    <div id="search-container">
+        <input type="text" id="search-input" placeholder="ค้นหาสถานที่ปลายทาง...">
+        <button class="tactical-btn" onclick="searchLocation()">ค้นหา</button>
+        <button class="tactical-btn" onclick="clearRoute()" style="border-color:#ff3366; color:#ff3366;">ล้างเส้นทาง</button>
+    </div>
+    <div id="search-results"></div>
+
+    <div id="map"></div>
+    
+    <div id="hud-panel">
+        <div class="hud-row">
+            <div>NETWORK: <span id="network-status" class="status-online">CONNECTING...</span></div>
+            <div>ICON STYLE: 
+                <select id="iconSelector" class="icon-selector" onchange="changeMarkerIcon(this.value)">
+                    <option value="sci-fi">TACTICAL TARGET</option>
+                    <option value="drone">CYBER DRONE</option>
+                    <option value="vehicle">COMBAT UNIT</option>
+                </select>
+            </div>
+        </div>
+        <div class="hud-row">
+            <div>GPS COORDS: <span id="coords" class="highlight">ACQUIRING SIGNAL...</span></div>
+        </div>
+        <div class="hud-row">
+            <div>ACCURACY: <span id="accuracy">-</span></div>
+            <div>VELOCITY: <span id="speed" class="highlight">0.0 KM/H</span></div>
+        </div>
+        <div class="hud-row">
+            <div>DISTANCE: <span id="route-dist" class="nav-info">0 M</span></div>
+            <div>EST. TIME: <span id="route-time" class="nav-info">0 MIN</span></div>
+        </div>
+    </div>
+
+    <!-- โหลด Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. สร้างแผนที่ตั้งค่าเริ่มต้นที่กรุงเทพฯ[cite: 1]
+        var map = L.map('map', { zoomControl: false }).setView([13.7563, 100.5018], 18);
+
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'ESRI Tactical Grid'
+        }).addTo(map);
+
+        var marker = null;
+        var accuracyCircle = null;
+        var destinationMarker = null;
+        var routeLine = null;
+        var currentLat = null, currentLng = null;
+        var currentIconType = 'sci-fi';
+
+        // ฟังก์ชันเลือกไอคอน GPS ของเรา
+        function getIconHtml(type) {
+            if (type === 'drone') return '<div class="drone-marker"></div>';
+            if (type === 'vehicle') return '<div class="vehicle-marker"></div>';
+            return '<div class="sci-fi-marker"></div>';
+        }
+
+        function changeMarkerIcon(type) {
+            currentIconType = type;
+            if (marker && currentLat && currentLng) {
+                var newIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: getIconHtml(currentIconType),
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                marker.setIcon(newIcon);
+            }
+        }
+
+        // ตรวจสอบสถานะ Online / Offline[cite: 1]
+        function updateNetworkStatus() {
+            const statusEl = document.getElementById('network-status');
+            if (navigator.onLine) {
+                statusEl.textContent = "ONLINE [CELL/WIFI]";
+                statusEl.className = "status-online";
+            } else {
+                statusEl.textContent = "OFFLINE [CACHE MODE]";
+                statusEl.className = "status-offline";
+            }
+        }
+        window.addEventListener('online', updateNetworkStatus);
+        window.addEventListener('offline', updateNetworkStatus);
+        updateNetworkStatus();
+
+        // 2. ดึงพิกัด Realtime ความแม่นยำสูง (High Accuracy GPS)[cite: 1]
+        if ("geolocation" in navigator) {
+            navigator.geolocation.watchPosition(function(position) {
+                currentLat = position.coords.latitude;
+                currentLng = position.coords.longitude;
+                var accuracy = position.coords.accuracy; 
+                var speed = position.coords.speed ? (position.coords.speed * 3.6).toFixed(1) : 0.0; 
+
+                document.getElementById('coords').textContent = `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
+                document.getElementById('accuracy').textContent = `± ${accuracy.toFixed(1)} M`;
+                document.getElementById('speed').textContent = `${speed} KM/H`;
+
+                var currentLatLng = new L.LatLng(currentLat, currentLng);
+                var customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: getIconHtml(currentIconType),
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                if (!marker) {
+                    marker = L.marker(currentLatLng, { icon: customIcon }).addTo(map);
+                    map.setView(currentLatLng, 18);
+                } else {
+                    marker.setLatLng(currentLatLng);
+                }
+
+                if (!accuracyCircle) {
+                    accuracyCircle = L.circle(currentLatLng, {
+                        radius: accuracy, color: '#00f0ff', weight: 1.5,
+                        dashArray: '4, 6', fillColor: '#00f0ff', fillOpacity: 0.05
+                    }).addTo(map);
+                } else {
+                    accuracyCircle.setLatLng(currentLatLng);
+                    accuracyCircle.setRadius(accuracy);
+                }
+
+                // อัปเดตเส้นทางอัตโนมัติหากมีจุดหมายปลายทาง
+                if (destinationMarker) {
+                    calculateRoute(currentLatLng, destinationMarker.getLatLng());
+                }
+
+            }, function(error) {
+                console.error("GPS Error: ", error.message);
+                document.getElementById('coords').textContent = "SIGNAL LOST (ENABLE LOCATION)";
+            }, {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000
+            });
+        } else {
+            alert("BROWSER NOT SUPPORTED");
+        }
+
+        // 3. ระบบค้นหาสถานที่ (Nominatim API)
+        function searchLocation() {
+            const query = document.getElementById('search-input').value;
+            if (!query) return;
+
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsContainer = document.getElementById('search-results');
+                    resultsContainer.innerHTML = '';
+                    if (data.length === 0) {
+                        resultsContainer.innerHTML = '<div class="search-item">ไม่พบสถานที่ที่ค้นหา</div>';
+                        resultsContainer.style.display = 'block';
+                        return;
+                    }
+
+                    resultsContainer.style.display = 'block';
+                    data.forEach(place => {
+                        const div = document.createElement('div');
+                        div.className = 'search-item';
+                        div.textContent = place.display_name;
+                        div.onclick = function() {
+                            selectDestination(parseFloat(place.lat), parseFloat(place.lon), place.display_name);
+                            resultsContainer.style.display = 'none';
+                        };
+                        resultsContainer.appendChild(div);
+                    });
+                })
+                .catch(err => console.error("Search error:", err));
+        }
+
+        // 4. กำหนดจุดหมายและวาดเส้นทาง (OSRM Routing API)
+        function selectDestination(lat, lon, name) {
+            var destLatLng = new L.LatLng(lat, lon);
+
+            if (destinationMarker) {
+                destinationMarker.setLatLng(destLatLng);
+            } else {
+                destinationMarker = L.marker(destLatLng).addTo(map)
+                    .bindPopup(`<b>DESTINATION:</b> ${name}`).openPopup();
+            }
+
+            map.setView(destLatLng, 15);
+
+            if (currentLat && currentLng) {
+                calculateRoute(new L.LatLng(currentLat, currentLng), destLatLng);
+            }
+        }
+
+        function calculateRoute(start, end) {
+            const url = `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+                        if (routeLine) {
+                            routeLine.setLatLngs(coords);
+                        } else {
+                            routeLine = L.polyline(coords, {
+                                color: '#00f0ff',
+                                weight: 4,
+                                opacity: 0.8,
+                                shadowColor: '#00f0ff',
+                                shadowBlur: 10
+                            }).addTo(map);
+                        }
+
+                        // คำนวณระยะทางและเวลา
+                        const distKm = (route.distance / 1000).toFixed(2);
+                        const durationMin = Math.round(route.duration / 60);
+                        document.getElementById('route-dist').textContent = `${distKm} KM`;
+                        document.getElementById('route-time').textContent = `${durationMin} MIN`;
+                    }
+                })
+                .catch(err => console.error("Routing error:", err));
+        }
+
+        function clearRoute() {
+            if (destinationMarker) {
+                map.removeLayer(destinationMarker);
+                destinationMarker = null;
+            }
+            if (routeLine) {
+                map.removeLayer(routeLine);
+                routeLine = null;
+            }
+            document.getElementById('route-dist').textContent = "0 M";
+            document.getElementById('route-time').textContent = "0 MIN";
+            document.getElementById('search-input').value = "";
+            document.getElementById('search-results').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
